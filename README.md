@@ -1,6 +1,6 @@
-# nocscienceat.XPlanePanel
+ï»¿# nocscienceat.XPlanePanel
 
-A .NET 10 library for building X-Plane cockpit panel modules. Provides a single-threaded work queue, dataref subscription helpers, lifecycle management, and an optional centralized dataref/command mapping service — so panel implementations can focus purely on hardware-specific logic.
+A .NET 10 library for building X-Plane cockpit panel modules. Provides a single-threaded work queue, dataref subscription helpers, lifecycle management, and an optional centralized dataref/command mapping service â€” so panel implementations can focus purely on hardware-specific logic.
 
 Depends on `nocscienceat.XPlaneWebConnector` for X-Plane communication.
 
@@ -12,8 +12,8 @@ Depends on `nocscienceat.XPlaneWebConnector` for X-Plane communication.
 2. [Class Hierarchy](#2-class-hierarchy)
 3. [What PanelHandlerBase Provides](#3-what-panelhandlerbase-provides)
    - 3.1 [Single-Threaded Work Queue](#31-single-threaded-work-queue)
-   - 3.2 [EnqueueWork — Thread-Safe Work Scheduling](#32-enqueuework--thread-safe-work-scheduling)
-   - 3.3 [SubscribeEnqueuedAsync — Dataref Subscription Helpers](#33-subscribeenqueuedasync--dataref-subscription-helpers)
+   - 3.2 [EnqueueWork â€” Thread-Safe Work Scheduling](#32-enqueuework--thread-safe-work-scheduling)
+   - 3.3 [SubscribeEnqueuedAsync â€” Dataref Subscription Helpers](#33-subscribeenqueuedasync--dataref-subscription-helpers)
    - 3.4 [Lifecycle Management](#34-lifecycle-management)
    - 3.5 [Protected Fields Available to Subclasses](#35-protected-fields-available-to-subclasses)
    - 3.6 [Configuration](#36-configuration)
@@ -37,7 +37,7 @@ Depends on `nocscienceat.XPlaneWebConnector` for X-Plane communication.
 
 ## 1. Quick Start
 
-**Program.cs** — three lines to set up the entire panel infrastructure:
+**Program.cs** â€” three lines to set up the entire panel infrastructure:
 
 ```csharp
 builder.Services.AddXPlaneWebConnector(builder.Configuration);
@@ -45,7 +45,7 @@ builder.Services.AddXPlanePanel();                                  // registers
 builder.Services.AddSingleton<IPanelHandler, MyPanelHandler>();     // register your panel(s)
 ```
 
-**appsettings.json** — enable your panel and set connection options:
+**appsettings.json** â€” enable your panel and set connection options:
 
 ```json
 {
@@ -58,7 +58,7 @@ builder.Services.AddSingleton<IPanelHandler, MyPanelHandler>();     // register 
 }
 ```
 
-**datarefs.json** (optional) — centralized dataref/command mappings:
+**datarefs.json** (optional) â€” centralized dataref/command mappings:
 
 ```json
 {
@@ -83,27 +83,27 @@ That's it. `PanelHostedService` discovers all registered `IPanelHandler` instanc
 
 ```
 IPanelHandler                              interface (IAsyncDisposable)
-?   PanelName: string
-?   IsConnected: bool
-?   ConnectAsync(CancellationToken): Task
-?   DisconnectAsync(): Task
-?
-???? PanelHandlerBase<TConfig>            abstract class
-     ?   where TConfig : PanelConfig, new()
-     ?   Provides: work queue, EnqueueWork, SubscribeEnqueuedAsync,
-     ?             lifecycle template, connector/logger/config,
-     ?             dataref/command registration & lookup
-     ?   _config is typed as TConfig
-     ?
-     ???? PanelHandlerBase<UdpPanelConfig> direct subclass with custom config
-     ?       implements: PanelName, OnConnectedAsync
-     ?
-     ???? JavaSimulatorPanelHandlerBase   intermediate base (serial UART)
-          ?   = PanelHandlerBase<SerialPanelConfig>
-          ?   Adds: SerialPort, SendToHardware, receive buffer,
-          ?         "command,value;" framing, ProcessCommandAsync
-          ?
-          ???? OvhPanelHandler            concrete panel (in consumer project)
+|   PanelName: string
+|   IsConnected: bool
+|   ConnectAsync(CancellationToken): Task
+|   DisconnectAsync(): Task
+|
++--- PanelHandlerBase<TConfig>            abstract class
+     |   where TConfig : PanelConfig, new()
+     |   Provides: work queue, EnqueueWork, SubscribeEnqueuedAsync,
+     |             lifecycle template, connector/logger/config,
+     |             dataref/command registration & lookup
+     |   _config is typed as TConfig
+     |
+     +--- PanelHandlerBase<UdpPanelConfig> direct subclass with custom config
+     |       implements: PanelName, OnConnectedAsync
+     |
+     +--- JavaSimulatorPanelHandlerBase   intermediate base (serial UART)
+          |   = PanelHandlerBase<SerialPanelConfig>
+          |   Adds: SerialPort, SendToHardware, receive buffer,
+          |         "command,value;" framing, ProcessCommandAsync
+          |
+          +--- OvhPanelHandler            concrete panel (in consumer project)
 ```
 
 > **You do not need an intermediate base class.** If your panel is simple enough,
@@ -138,7 +138,7 @@ Work items are enqueued from **any thread** (connector callbacks, hardware recei
 
 The work queue task is started automatically by `ConnectAsync` and drained during `DisconnectAsync`. You never need to manage it yourself.
 
-### 3.2 EnqueueWork — Thread-Safe Work Scheduling
+### 3.2 EnqueueWork â€” Thread-Safe Work Scheduling
 
 Two overloads for scheduling work onto the panel task:
 
@@ -150,7 +150,7 @@ protected void EnqueueWork(Func<Task> work);
 protected void EnqueueWork(Action work);
 ```
 
-Both are **non-blocking** — they write to the channel and return immediately. The actual execution happens later on the drain task.
+Both are **non-blocking** â€” they write to the channel and return immediately. The actual execution happens later on the drain task.
 
 **When to use:** Whenever you receive data from a source that runs on a different thread (hardware events, timer callbacks, external API calls) and need to touch panel state.
 
@@ -167,7 +167,7 @@ void OnHidReport(HidReport report)
 }
 ```
 
-### 3.3 SubscribeEnqueuedAsync — Dataref Subscription Helpers
+### 3.3 SubscribeEnqueuedAsync â€” Dataref Subscription Helpers
 
 Convenience methods that subscribe to an X-Plane dataref via `_connector.SubscribeAsync` **and** automatically route the callback through the work queue. This means the callback body can safely read/write panel state without any synchronization.
 
@@ -183,10 +183,10 @@ All four X-Plane dataref types are covered, each with a synchronous (`Action<T>`
 **Usage:**
 
 ```csharp
-// Sync — just update state (most common)
+// Sync â€” just update state (most common)
 await SubscribeEnqueuedAsync("sim/cockpit/autopilot/heading", (float h) => _heading = h);
 
-// Async — when the callback itself needs to await something
+// Async â€” when the callback itself needs to await something
 await SubscribeEnqueuedAsync("sim/aircraft/view/acf_tailnum", async (string tail) =>
 {
     _tailNumber = tail;
@@ -218,12 +218,12 @@ await SubscribeEnqueuedAsync("sim/aircraft/view/acf_tailnum", async (string tail
 
 ### 3.6 Configuration
 
-Configuration is **panel-specific and type-safe**. The base class is generic on `TConfig` and binds the `Panels:{PanelName}` section from `IConfiguration` directly — no wrapper dictionary needed.
+Configuration is **panel-specific and type-safe**. The base class is generic on `TConfig` and binds the `Panels:{PanelName}` section from `IConfiguration` directly â€” no wrapper dictionary needed.
 
 #### Config class hierarchy
 
 ```csharp
-public class PanelConfig                   // universal — just the on/off switch
+public class PanelConfig                   // universal â€” just the on/off switch
 {
     public bool Enabled { get; set; }
 }
@@ -244,7 +244,7 @@ public class UdpPanelConfig : PanelConfig      // for a hypothetical UDP panel
 
 #### JSON structure (`appsettings.json`)
 
-Flat — each panel is a direct child of `Panels`, keyed by `PanelName`:
+Flat â€” each panel is a direct child of `Panels`, keyed by `PanelName`:
 
 ```json
 {
@@ -263,7 +263,7 @@ Flat — each panel is a direct child of `Panels`, keyed by `PanelName`:
 }
 ```
 
-If no entry exists for a panel's name, the config defaults to `new TConfig()` (which has `Enabled = false`). No `Configure<>` call is needed in `Program.cs` — panels read `IConfiguration` directly.
+If no entry exists for a panel's name, the config defaults to `new TConfig()` (which has `Enabled = false`). No `Configure<>` call is needed in `Program.cs` â€” panels read `IConfiguration` directly.
 
 ---
 
@@ -273,7 +273,7 @@ There are three ways to reference X-Plane dataref paths and command paths in you
 
 ### 4.1 Using Raw Strings (Simplest)
 
-Pass X-Plane paths directly — no registration needed:
+Pass X-Plane paths directly â€” no registration needed:
 
 ```csharp
 await SubscribeEnqueuedAsync("sim/cockpit2/gauges/heading_deg", (float h) => _heading = h);
@@ -322,7 +322,7 @@ Available lookup methods:
 
 ### 4.3 Centralized Overrides with DataRefCommandProvider
 
-The `DataRefCommandProvider` is a singleton that loads dataref and command mappings from `IConfiguration` (typically a `datarefs.json` file). It acts as an **upstream override layer** — when a mapping exists in the provider, it takes priority over the panel's own registered mappings.
+The `DataRefCommandProvider` is a singleton that loads dataref and command mappings from `IConfiguration` (typically a `datarefs.json` file). It acts as an **upstream override layer** â€” when a mapping exists in the provider, it takes priority over the panel's own registered mappings.
 
 This is useful for:
 - Keeping all X-Plane paths in a single JSON file, separate from code
@@ -358,7 +358,7 @@ Internally, these are stored as compound keys: `"OVH:BAT1_V"`, `"OVH:ApuStart"`,
 
 #### Setup
 
-Add `datarefs.json` to configuration sources (optional — the provider is fail-safe if the file or section is missing):
+Add `datarefs.json` to configuration sources (optional â€” the provider is fail-safe if the file or section is missing):
 
 ```csharp
 builder.Configuration.AddJsonFile("datarefs.json", optional: true, reloadOnChange: true);
@@ -428,7 +428,7 @@ protected abstract Task OnConnectedAsync(CancellationToken cancellationToken);
 
 Called **once** after `RegisterDataRefsAndCommands` has run and the work queue is running. This is where you:
 
-1. **Open your communication channel** (serial port, USB device, network socket, …)
+1. **Open your communication channel** (serial port, USB device, network socket, â€¦)
 2. **Start any additional background tasks** you need (receive loops, write pumps)
 3. **Subscribe to X-Plane datarefs** that your panel needs
 
@@ -500,7 +500,7 @@ You **rarely** need to override these. The defaults handle the enabled check, CT
 
 ### 5.3 Complete Example: A Minimal Panel from Scratch
 
-This example implements a hypothetical panel that communicates over a UDP socket — no intermediate base class, directly on `PanelHandlerBase<TConfig>` with its own config POCO:
+This example implements a hypothetical panel that communicates over a UDP socket â€” no intermediate base class, directly on `PanelHandlerBase<TConfig>` with its own config POCO:
 
 ```csharp
 using nocscienceat.XPlanePanel;
@@ -518,7 +518,7 @@ public class MipPanelHandler : PanelHandlerBase<UdpPanelConfig>
     private UdpClient? _udp;
     private Task? _receiveTask;
 
-    // Panel state — safe to access without locks because
+    // Panel state â€” safe to access without locks because
     // all access is from the single work queue task.
     private float _heading;
     private int _gearPosition;
@@ -537,14 +537,14 @@ public class MipPanelHandler : PanelHandlerBase<UdpPanelConfig>
 
     protected override async Task OnConnectedAsync(CancellationToken cancellationToken)
     {
-        // 1. Open communication channel — _config is UdpPanelConfig
+        // 1. Open communication channel â€” _config is UdpPanelConfig
         _udp = new UdpClient(_config.ListenPort);
         _logger.LogInformation("{Panel} listening on UDP port {Port}", PanelName, _config.ListenPort);
 
         // 2. Start receive loop
         _receiveTask = Task.Run(() => ReceiveLoopAsync(cancellationToken), cancellationToken);
 
-        // 3. Subscribe to X-Plane datarefs (raw strings — simplest approach)
+        // 3. Subscribe to X-Plane datarefs (raw strings â€” simplest approach)
         await SubscribeEnqueuedAsync("sim/cockpit2/gauges/heading_deg", (float h) =>
         {
             _heading = h;
@@ -568,7 +568,7 @@ public class MipPanelHandler : PanelHandlerBase<UdpPanelConfig>
 builder.Services.AddSingleton<IPanelHandler, MipPanelHandler>();
 ```
 
-That's it — `PanelHostedService` will discover it via `IEnumerable<IPanelHandler>` and call `ConnectAsync` / `DisconnectAsync` automatically.
+That's it â€” `PanelHostedService` will discover it via `IEnumerable<IPanelHandler>` and call `ConnectAsync` / `DisconnectAsync` automatically.
 
 ---
 
@@ -662,7 +662,7 @@ PanelHostedService         PanelHandlerBase              YourPanel
 
 **Rules for panel implementors:**
 
-1. **All mutable panel state** (toggle flags, cached values, display state) must only be accessed from callbacks that run on the work queue task — i.e., inside `EnqueueWork(...)` or inside `SubscribeEnqueuedAsync` callbacks.
+1. **All mutable panel state** (toggle flags, cached values, display state) must only be accessed from callbacks that run on the work queue task â€” i.e., inside `EnqueueWork(...)` or inside `SubscribeEnqueuedAsync` callbacks.
 2. **Sending to hardware** can happen from the work task. If your hardware channel is not thread-safe, add your own write queue (see `JavaSimulatorPanelHandlerBase._serialWriteQueue` for an example).
 3. **`_connector` method calls** (`SetDataRefValueAsync`, `SendCommandAsync`, `SubscribeAsync`) are thread-safe and can be called from anywhere, including the work task.
 4. **Don't block the work task** for long periods. If you have expensive I/O (e.g. a slow serial write), offload it to a separate queue/task.
@@ -679,7 +679,7 @@ builder.Services.AddSingleton<IPanelHandler, MipPanelHandler>();    // your pane
 builder.Services.AddSingleton<IPanelHandler, OvhPanelHandler>();
 ```
 
-No `Configure<>` call is needed — each panel reads its own config section from `IConfiguration` directly (which is auto-registered by `Host.CreateApplicationBuilder`).
+No `Configure<>` call is needed â€” each panel reads its own config section from `IConfiguration` directly (which is auto-registered by `Host.CreateApplicationBuilder`).
 
 `AddXPlanePanel()` registers:
 - `IDataRefCommandProvider` ? `DataRefCommandProvider` (singleton, reads `XplaneDataRefsCommands` from `IConfiguration`)
@@ -692,7 +692,7 @@ The `PanelHostedService` will:
 3. Call `ConnectAsync` on **all** registered `IPanelHandler` instances
 4. On shutdown, call `DisconnectAsync` on all panels, then stop the connector
 
-No manual orchestration needed — just register and the hosted service handles the rest.
+No manual orchestration needed â€” just register and the hosted service handles the rest.
 
 ---
 
@@ -710,8 +710,8 @@ Closes the generic as `PanelHandlerBase<SerialPanelConfig>`, adding serial UART 
 | `SendToHardware(cmd, val)` | Non-blocking enqueue to serial write pump |
 | `_serialWriteQueue` | Dedicated serial write background task |
 | Receive buffer + delimiter parsing | Assembles `"cmd,val;"` frames from byte stream |
-| `ProcessCommandAsync(cmd, val)` | Abstract — concrete panels implement command dispatch |
-| `SubscribeToDataRefsAsync(ct)` | Abstract — concrete panels subscribe to their datarefs |
+| `ProcessCommandAsync(cmd, val)` | Abstract â€” concrete panels implement command dispatch |
+| `SubscribeToDataRefsAsync(ct)` | Abstract â€” concrete panels subscribe to their datarefs |
 | `"DOFF,1;"` shutdown | Sent to hardware on disconnect |
 
 **When to create an intermediate base class:**
