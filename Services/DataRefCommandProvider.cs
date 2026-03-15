@@ -1,12 +1,29 @@
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 
 namespace nocscienceat.XPlanePanel.Services;
 
 /// <summary>
-/// Singleton that stores cross-panel dataref and command overrides.
-/// Populated once at startup; read-only at runtime.
-/// </summary>
+/// Singleton that stores cross-panel dataref and command overrides
+/// or provides dataref/command registrations if the panel provides none in code but as json file
+/// Populated once at startup from IConfiguration Section "XplaneDataRefsCommands" → PanelName → DataRefs/Commands.
 /// 
+/// Read-only at runtime.
+/// </summary>
+/// <remarks>
+/// Expected configuration format:
+/// <code>
+/// {
+///   "XplaneDataRefsCommands": {
+///     "PanelName": {
+///       "DataRefs": {
+///       },
+///       "Commands": {
+///       }
+///     }
+///   }
+/// }
+/// </code>
+/// </remarks>
 public class DataRefCommandProvider : IDataRefCommandProvider
 {
     private readonly Dictionary<string, string> _dataRefs = new();
@@ -42,3 +59,4 @@ public class DataRefCommandProvider : IDataRefCommandProvider
         return _commands.TryGetValue($"{panelHandler.PanelName}:{key}", out commandPath!);
     }
 }
+

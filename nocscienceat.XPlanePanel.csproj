@@ -5,12 +5,43 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <NoWarn>CS1591</NoWarn>
+
+    <!-- NuGet package metadata -->
+    <PackageId>nocscienceat.XPlanePanel</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>klemensurban</Authors>
+    <Description>A .NET 10 library for building X-Plane cockpit panel modules. Provides a single-threaded work queue, dataref subscription helpers, lifecycle management, and an optional centralized dataref/command mapping service.</Description>
+    <PackageTags>xplane;cockpit;panel;simulator;flight</PackageTags>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/klemensurban/nocscienceat.XPlanePanel</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/klemensurban/nocscienceat.XPlanePanel</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+
+    <!-- Package generation -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- Deterministic & reproducible builds -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="LICENSE.txt" Pack="true" PackagePath="" />
+    <None Include="README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
     <PackageReference Include="nocscienceat.XPlaneWebConnector" Version="3.2.0" />
     <PackageReference Include="System.IO.Ports" Version="10.0.3" />
   </ItemGroup>

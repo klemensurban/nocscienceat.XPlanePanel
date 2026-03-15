@@ -16,20 +16,50 @@ namespace nocscienceat.XPlanePanel;
 /// </summary>
 public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TConfig : PanelConfig, new()
 {
+    /// <summary>The X-Plane web connector used to subscribe to datarefs and send commands.</summary>
     protected readonly IXPlaneWebConnector _connector;
+
+    /// <summary>Logger instance scoped to the concrete panel type.</summary>
     protected readonly ILogger _logger;
+
+    /// <summary>Strongly-typed configuration bound from <c>Panels:{PanelName}</c>.</summary>
     protected readonly TConfig _config;
+
+    /// <summary>
+    /// Optional provider that can override the default dataref/command registrations
+    /// or define dataref/command registrations if the panel provides none in code but as json file
+    /// </summary>
     private readonly IDataRefCommandProvider? _overrideProvider;
 
-    // Single work queue: both subscription callbacks and hardware commands enqueue here.
-    // One background task drains it — all panel state is accessed from a single thread.
+    /// <summary>
+    /// Single work queue: both subscription callbacks and hardware commands enqueue here.
+    /// One background task drains it — all panel state is accessed from a single thread.
+    /// </summary>
     private readonly Channel<Func<Task>> _sequentialWorkQueue = Channel.CreateUnbounded<Func<Task>>(new UnboundedChannelOptions { SingleReader = true });
+
+    /// <summary>Background task that drains <see cref="_sequentialWorkQueue"/>.</summary>
     private Task? _workTask;
+
+    /// <summary>Cancellation source linked to the external token passed to <see cref="ConnectAsync"/>.</summary>
     private CancellationTokenSource? _panelCts;
 
+    /// <summary>Gets the unique display name of this panel (used for configuration binding and logging).</summary>
     public abstract string PanelName { get; }
+
+    /// <summary>Gets a value indicating whether the panel's communication channel is currently open.</summary>
     public virtual bool IsConnected => false;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PanelHandlerBase{TConfig}"/> class.
+    /// </summary>
+    /// <param name="connector">The X-Plane web connector for dataref subscriptions and command execution.</param>
+    /// <param name="configuration">Application configuration root used to bind the panel-specific section.</param>
+    /// <param name="logger">Logger instance for diagnostic output.</param>
+    /// <param name="overrideProvider">
+    /// Optional provider that can override the default dataref/command registrations.
+    /// or provide dataref/command registrations if the panel provides none in code but as json file -  
+    ///  <see cref="DataRefCommandProvider"/> for details.
+    /// </param>
     protected PanelHandlerBase(IXPlaneWebConnector connector, IConfiguration configuration, ILogger logger,
         IDataRefCommandProvider? overrideProvider = null)
     {
@@ -39,6 +69,11 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
         _config = configuration.GetSection($"Panels:{PanelName}").Get<TConfig>() ?? new TConfig();
     }
 
+    /// <summary>
+    /// Connects the panel by registering datarefs/commands, starting the sequential work queue,
+    /// and delegating to <see cref="OnConnectedAsync"/> for channel-specific setup.
+    /// </summary>
+    /// <param name="cancellationToken">Token that signals the panel should shut down.</param>
     public virtual async Task ConnectAsync(CancellationToken cancellationToken)
     {
         if (!_config.Enabled)
@@ -61,16 +96,19 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
         }
     }
 
-
+    /// <summary>
+    /// Registers datarefs and commands required by this panel.
+    /// By default, does nothing. Subclasses can override to perform registrations.
+    /// </summary>
     protected virtual void RegisterDataRefsAndCommands()
     {
-        // By default, do nothing. Subclasses can override to register datarefs and commands.
     }
 
     /// <summary>
     /// Called after the work queue task has started. Subclasses should open their
     /// communication channel and subscribe to datarefs here.
     /// </summary>
+    /// <param name="cancellationToken">Token that signals the panel should shut down.</param>
     protected abstract Task OnConnectedAsync(CancellationToken cancellationToken);
 
     /// <summary>
@@ -84,6 +122,7 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
     /// Use this from subscription callbacks to ensure all panel state
     /// is accessed from a single thread.
     /// </summary>
+    /// <param name="work">The asynchronous work item to enqueue.</param>
     protected void EnqueueWork(Func<Task> work)
     {
         _sequentialWorkQueue.Writer.TryWrite(work);
@@ -94,6 +133,7 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
     /// Use this from subscription callbacks to ensure all panel state
     /// is accessed from a single thread.
     /// </summary>
+    /// <param name="work">The synchronous work item to enqueue.</param>
     protected void EnqueueWork(Action work)
     {
         _sequentialWorkQueue.Writer.TryWrite(() => { work(); return Task.CompletedTask; });
@@ -109,6 +149,8 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
     /// Subscribes to a <see cref="double"/> dataref and routes the callback through the single
     /// worker task, enabling lock-free state access from panel logic.
     /// </summary>
+    /// <param name="dataRefPath">The X-Plane dataref path to subscribe to.</param>
+    /// <param name="callback">Synchronous callback invoked with the new value.</param>
     protected Task SubscribeEnqueuedAsync(string dataRefPath, Action<double> callback)
     {
         return _connector.SubscribeAsync(dataRefPath, (double value) => EnqueueWork(() => callback(value)));
@@ -118,6 +160,8 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
     /// Subscribes to a <see cref="double"/> dataref and routes the async callback through the single
     /// worker task, enabling lock-free state access from panel logic.
     /// </summary>
+    /// <param name="dataRefPath">The X-Plane dataref path to subscribe to.</param>
+    /// <param name="callback">Asynchronous callback invoked with the new value.</param>
     protected Task SubscribeEnqueuedAsync(string dataRefPath, Func<double, Task> callback)
     {
         return _connector.SubscribeAsync(dataRefPath, (double value) => EnqueueWork(() => callback(value)));
@@ -127,6 +171,8 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
     /// Subscribes to a <see cref="float"/> dataref and routes the callback through the single
     /// worker task, enabling lock-free state access from panel logic.
     /// </summary>
+    /// <param name="dataRefPath">The X-Plane dataref path to subscribe to.</param>
+    /// <param name="callback">Synchronous callback invoked with the new value.</param>
     protected Task SubscribeEnqueuedAsync(string dataRefPath, Action<float> callback)
     {
         return _connector.SubscribeAsync(dataRefPath, (float value) => EnqueueWork(() => callback(value)));
@@ -136,6 +182,8 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
     /// Subscribes to a <see cref="float"/> dataref and routes the async callback through the single
     /// worker task, enabling lock-free state access from panel logic.
     /// </summary>
+    /// <param name="dataRefPath">The X-Plane dataref path to subscribe to.</param>
+    /// <param name="callback">Asynchronous callback invoked with the new value.</param>
     protected Task SubscribeEnqueuedAsync(string dataRefPath, Func<float, Task> callback)
     {
         return _connector.SubscribeAsync(dataRefPath, (float value) => EnqueueWork(() => callback(value)));
@@ -145,6 +193,8 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
     /// Subscribes to an <see cref="int"/> dataref and routes the callback through the single
     /// worker task, enabling lock-free state access from panel logic.
     /// </summary>
+    /// <param name="dataRefPath">The X-Plane dataref path to subscribe to.</param>
+    /// <param name="callback">Synchronous callback invoked with the new value.</param>
     protected Task SubscribeEnqueuedAsync(string dataRefPath, Action<int> callback)
     {
         return _connector.SubscribeAsync(dataRefPath, (int value) => EnqueueWork(() => callback(value)));
@@ -154,6 +204,8 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
     /// Subscribes to an <see cref="int"/> dataref and routes the async callback through the single
     /// worker task, enabling lock-free state access from panel logic.
     /// </summary>
+    /// <param name="dataRefPath">The X-Plane dataref path to subscribe to.</param>
+    /// <param name="callback">Asynchronous callback invoked with the new value.</param>
     protected Task SubscribeEnqueuedAsync(string dataRefPath, Func<int, Task> callback)
     {
         return _connector.SubscribeAsync(dataRefPath, (int value) => EnqueueWork(() => callback(value)));
@@ -163,6 +215,8 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
     /// Subscribes to a <see cref="string"/> (byte-array / data) dataref and routes the callback
     /// through the single worker task, enabling lock-free state access from panel logic.
     /// </summary>
+    /// <param name="dataRefPath">The X-Plane dataref path to subscribe to.</param>
+    /// <param name="callback">Synchronous callback invoked with the new value.</param>
     protected Task SubscribeEnqueuedAsync(string dataRefPath, Action<string> callback)
     {
         return _connector.SubscribeAsync(dataRefPath, (string value) => EnqueueWork(() => callback(value)));
@@ -172,6 +226,8 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
     /// Subscribes to a <see cref="string"/> (byte-array / data) dataref and routes the async
     /// callback through the single worker task, enabling lock-free state access from panel logic.
     /// </summary>
+    /// <param name="dataRefPath">The X-Plane dataref path to subscribe to.</param>
+    /// <param name="callback">Asynchronous callback invoked with the new value.</param>
     protected Task SubscribeEnqueuedAsync(string dataRefPath, Func<string, Task> callback)
     {
         return _connector.SubscribeAsync(dataRefPath, (string value) => EnqueueWork(() => callback(value)));
@@ -181,6 +237,7 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
     /// Single background task that drains the work queue.
     /// All panel state (toggle fields, etc.) is accessed exclusively from this task.
     /// </summary>
+    /// <param name="ct">Cancellation token that stops the drain loop.</param>
     private async Task DrainWorkQueueAsync(CancellationToken ct)
     {
         try
@@ -200,6 +257,10 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
     }
 
+    /// <summary>
+    /// Gracefully disconnects the panel by cancelling the work queue, invoking
+    /// <see cref="OnDisconnectingAsync"/>, and disposing of internal resources.
+    /// </summary>
     public virtual async Task DisconnectAsync()
     {
         if (_panelCts is not null)
@@ -226,11 +287,12 @@ public abstract partial class PanelHandlerBase<TConfig> : IPanelHandler where TC
         }
     }
 
+    /// <summary>
+    /// Asynchronously disposes the panel by delegating to <see cref="DisconnectAsync"/>.
+    /// </summary>
     public virtual async ValueTask DisposeAsync()
     {
         await DisconnectAsync();
         GC.SuppressFinalize(this);
     }
-
-
 }
