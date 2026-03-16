@@ -570,6 +570,9 @@ builder.Services.AddSingleton<IPanelHandler, MipPanelHandler>();
 
 That's it — `PanelHostedService` will discover it via `IEnumerable<IPanelHandler>` and call `ConnectAsync` / `DisconnectAsync` automatically.
 
+A complete example with a real communication protocol (e.g. serial UART) is available in the `JavaSimulatorPanelHandlerBase` class in the library, and the `OvhPanelHandler` in the consumer project (https://github.com/klemensurban/nocscienceat.JavaSimulatorOVH).
+
+
 ---
 
 ## 6. Lifecycle Sequence Diagrams
