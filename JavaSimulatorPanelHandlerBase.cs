@@ -97,6 +97,53 @@ public abstract class JavaSimulatorPanelHandlerBase : PanelHandlerBase<SerialPan
         _serialWriteQueue.Writer.TryWrite($"{command};");
     }
 
+    /// <summary>
+    /// Closes and reopens the serial port with DTR/RTS reset. Does NOT re-subscribe
+    /// to datarefs (subscriptions are still alive in the connector). The existing
+    /// serial write queue continues to work — writes during the reset are silently
+    /// dropped by the drain pump because <see cref="_serialPort"/> is briefly null/closed.
+    /// <para>Must be called from the panel work queue (single-threaded).</para>
+    /// </summary>
+    protected async Task ResetSerialPortAsync(CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("{Panel}: Resetting serial port ...", PanelName);
+
+        // Detach event handler and close the old port
+        if (_serialPort is not null)
+        {
+            _serialPort.DataReceived -= OnDataReceived;
+            if (_serialPort.IsOpen)
+            {
+                try { _serialPort.WriteLine("DOFF,1;"); } catch { }
+                _serialPort.Close();
+            }
+            _serialPort.Dispose();
+            _serialPort = null;
+        }
+
+        await Task.Delay(500, cancellationToken);
+
+        // Reopen with DTR/RTS reset (same as OnConnectedAsync)
+        _serialPort = new SerialPort(_config.PortName, _config.BaudRate)
+        {
+            DtrEnable = true,
+            RtsEnable = true
+        };
+        _serialPort.Open();
+
+        await Task.Delay(500, cancellationToken);
+        _serialPort.DiscardInBuffer();
+        _serialPort.DiscardOutBuffer();
+
+        await _bufferLock.WaitAsync(cancellationToken);
+        try { _receiveBuffer = ""; }
+        finally { _bufferLock.Release(); }
+
+        _serialPort.DataReceived += OnDataReceived;
+
+        _logger.LogInformation("{Panel}: Serial port reset complete on {Port}", PanelName, _config.PortName);
+    }
+
     private void OnDataReceived(object sender, SerialDataReceivedEventArgs e)
     {
         _ = EnqueueReceivedDataAsync();
@@ -181,6 +228,11 @@ public abstract class JavaSimulatorPanelHandlerBase : PanelHandlerBase<SerialPan
                     try
                     {
                         _serialPort.WriteLine(message);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Expected during serial port reset — the port was closed mid-write.
+                        _logger.LogDebug("{Panel} serial write cancelled (port closing)", PanelName);
                     }
                     catch (Exception ex)
                     {

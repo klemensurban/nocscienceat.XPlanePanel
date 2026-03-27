@@ -9,7 +9,7 @@
 
     <!-- NuGet package metadata -->
     <PackageId>nocscienceat.XPlanePanel</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>klemensurban</Authors>
     <Description>A .NET 10 library for building X-Plane cockpit panel modules. Provides a single-threaded work queue, dataref subscription helpers, lifecycle management, and an optional centralized dataref/command mapping service.</Description>
     <PackageTags>xplane;cockpit;panel;simulator;flight</PackageTags>
@@ -42,8 +42,11 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.3" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
-    <PackageReference Include="nocscienceat.XPlaneWebConnector" Version="3.2.0" />
     <PackageReference Include="System.IO.Ports" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\nocscienceat.XPlaneWebConnector\nocscienceat.XPlaneWebConnector.csproj" />
   </ItemGroup>
 
 </Project>
